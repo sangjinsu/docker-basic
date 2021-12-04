@@ -9,7 +9,7 @@
 $ docker run -d --name sangjs-ghost -e url=http://localhost:60000 -p 60000:2368 -v sangjs-ghost-data:/var/lib/ghost/content ghost
 ```
 
-```sh
+```
 # by default, the Ghost image will use SQLite (and thus requires no separate database container)
 # we have used MySQL here merely for demonstration purposes (especially environment-variable-based configuration)
 
@@ -45,5 +45,83 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: example
+```
+
+
+
+## 방명록 배포하기
+
+1. 62000 포트로 서버를 오픈합니다.
+2. docker-compose.yml 파일로 작성합니다.
+
+```
+version: '3'
+services:
+  frontend:
+    image: subicura/guestbook-frontend:latest
+    environment:
+      PORT: 8000
+      GUESTBOOK_API_ADDR: backend:8000
+    ports:
+      - "62000:8000"
+  backend:
+    image: subicura/guestbook-backend:latest
+    environment:
+      PORT: 8000
+      GUESTBOOK_DB_ADDR: mongodb:27017
+    restart: always
+  mongodb:
+    image: mongo:4
+```
+
+
+
+## 투표 앱 생성
+
+- 깃 리파지토리를 clone 후 진행합니다.
+- 필요한 이미지를 직접 빌드하여 만듭니다.
+- 여러개의 마이크로서비스를 연결합니다.
+
+**실습내용**
+
+1. 5개의 서비스를 하나의 docker-compose.yml로 만듭니다.
+2. vote는 60001로 오픈합니다.
+3. result는 60002로 오픈합니다.
+4. docker-compose.yml 파일로 작성합니다.
+
+
+
+```bash
+$ git clone https://gitlab.com/44bits.io/workshop-voting.git
+$ docker build -t voting-vote .
+$ docker build -t voting-worker .
+$ docker build -t voting-result .
+```
+
+
+
+```
+# $ cd vote
+# $ docker build -t voting-vote .
+# $ cd worker
+version: '3'
+
+services:
+  vote:
+    image: voting-vote
+    ports:
+      - "60001:80"
+  redis:
+    image: redis:alpine
+  worker:
+    image: voting-worker
+  db:
+    image: postgres:9.4
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+  result:
+    image: voting-result
+    ports:
+      - "60002:80"
 ```
 
